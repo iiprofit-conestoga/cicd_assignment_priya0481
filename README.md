@@ -35,7 +35,7 @@ The pipeline consists of the following stages:
 4. Package: Creates deployment package
 5. Deploy: Deploys to Azure Function App
 
-The pipeline is triggered automatically when changes are pushed to the main branch.
+The pipeline is triggered automatically when changes are pushed to the main branch. It uses GitHub webhooks and periodic polling (every 5 minutes) to detect changes.
 
 ## Test Cases
 The project includes test cases for the Azure Function:
