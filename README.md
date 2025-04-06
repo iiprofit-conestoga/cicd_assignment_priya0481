@@ -12,7 +12,7 @@ This project demonstrates a CI/CD pipeline using Jenkins to deploy a Python Azur
 - `local.settings.json`: Local development settings
 
 ## Prerequisites
-- Python 3.8 or higher
+- Python 3.12 or higher
 - Azure CLI
 - Jenkins server with configured credentials:
   - Azure Service Principal credentials
@@ -41,6 +41,8 @@ The Jenkins pipeline consists of three stages:
 1. Build: Sets up Python environment and installs dependencies
 2. Test: Runs automated tests
 3. Deploy: Deploys the function to Azure Functions
+
+The pipeline is triggered automatically when changes are pushed to the main branch.
 
 ## Test Cases
 The project includes three test cases:
