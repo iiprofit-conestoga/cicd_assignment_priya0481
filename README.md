@@ -16,7 +16,7 @@ This project demonstrates a CI/CD pipeline for deploying an Azure Function App u
 - Azure CLI
 - Jenkins server
 - GitHub account
-- Azure subscription with service principal having Contributor access to the resource group
+- Azure subscription with service principal having Website Contributor role for the Function App and resource group
 
 ## Local Development
 1. Clone the repository
