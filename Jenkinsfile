@@ -1,6 +1,11 @@
 pipeline {
     agent any
     
+    triggers {
+        // GitHub webhook trigger
+        githubPush()
+    }
+    
     environment {
         // Azure credentials and configuration for assignment.
         AZURE_SUBSCRIPTION_ID = credentials('AZURE_SUBSCRIPTION_ID')
@@ -28,9 +33,9 @@ pipeline {
                 script {
                     echo 'Setting up Python environment...'
                     sh '''
-                        python --version
-                        python -m venv venv
-                        . venv/Scripts/activate
+                        python3 --version
+                        python3 -m venv venv
+                        . venv/bin/activate
                         python -m pip install --upgrade pip
                         python -m pip install --no-cache-dir -r requirements.txt
                     '''
@@ -43,7 +48,7 @@ pipeline {
                 script {
                     echo 'Running tests...'
                     sh '''
-                        . venv/Scripts/activate
+                        . venv/bin/activate
                         python -m pytest test_function.py -v
                     '''
                 }
@@ -54,23 +59,20 @@ pipeline {
             steps {
                 script {
                     echo 'Creating deployment package...'
-                    powershell '''
+                    sh '''
                         # Create deployment directory
-                        New-Item -ItemType Directory -Force -Path deploy
-                        
-                        # Create function directory structure
-                        New-Item -ItemType Directory -Force -Path deploy/HttpTrigger
+                        mkdir -p deploy/HttpTrigger
                         
                         # Copy function code
-                        Copy-Item -Path function_app.py -Destination deploy/HttpTrigger/__init__.py
+                        cp function_app.py deploy/HttpTrigger/__init__.py
                         
                         # Copy configuration files
-                        Copy-Item -Path requirements.txt -Destination deploy/
-                        Copy-Item -Path host.json -Destination deploy/
-                        Copy-Item -Path local.settings.json -Destination deploy/
+                        cp requirements.txt deploy/
+                        cp host.json deploy/
+                        cp local.settings.json deploy/
                         
                         # Create function.json for the HTTP trigger
-                        $functionJson = @"
+                        cat > deploy/HttpTrigger/function.json << 'EOF'
 {
   "scriptFile": "__init__.py",
   "bindings": [
@@ -93,16 +95,14 @@ pipeline {
     }
   ]
 }
-"@
-                        Set-Content -Path deploy/HttpTrigger/function.json -Value $functionJson
+EOF
                         
                         # Create deployment package
-                        Compress-Archive -Path deploy/* -DestinationPath function_package.zip -Force
+                        zip -r function_package.zip deploy/*
                         
                         # Verify package contents
-                        New-Item -ItemType Directory -Force -Path verify_package
-                        Expand-Archive -Path function_package.zip -DestinationPath verify_package
-                        Get-ChildItem -Path verify_package -Recurse
+                        mkdir -p verify_package
+                        unzip -l function_package.zip
                     '''
                 }
             }
@@ -112,54 +112,53 @@ pipeline {
             steps {
                 script {
                     echo 'Deploying to Azure...'
-                    powershell '''
+                    sh '''
                         # Login to Azure
-                        az login --service-principal -u $env:AZURE_CLIENT_ID -p $env:AZURE_CLIENT_SECRET --tenant $env:AZURE_TENANT_ID
-                        az account set --subscription $env:AZURE_SUBSCRIPTION_ID
+                        az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
+                        az account set --subscription $AZURE_SUBSCRIPTION_ID
                         
                         # Create function app if it doesn't exist
-                        $functionApp = az functionapp show --name $env:FUNCTION_APP_NAME --resource-group $env:RESOURCE_GROUP 2>$null
-                        if (-not $functionApp) {
-                            Write-Host "Creating new function app..."
-                            az functionapp create `
-                                --name $env:FUNCTION_APP_NAME `
-                                --resource-group $env:RESOURCE_GROUP `
-                                --storage-account $env:STORAGE_ACCOUNT `
-                                --runtime python `
-                                --runtime-version $env:PYTHON_VERSION `
-                                --functions-version $env:FUNCTIONS_VERSION `
-                                --os-type linux `
-                                --consumption-plan-location $env:LOCATION `
+                        if ! az functionapp show --name $FUNCTION_APP_NAME --resource-group $RESOURCE_GROUP &> /dev/null; then
+                            echo "Creating new function app..."
+                            az functionapp create \
+                                --name $FUNCTION_APP_NAME \
+                                --resource-group $RESOURCE_GROUP \
+                                --storage-account $STORAGE_ACCOUNT \
+                                --runtime python \
+                                --runtime-version $PYTHON_VERSION \
+                                --functions-version $FUNCTIONS_VERSION \
+                                --os-type linux \
+                                --consumption-plan-location $LOCATION \
                                 --https-only true
                             
                             # Configure Python settings
-                            Write-Host "Configuring Python settings..."
-                            az functionapp config appsettings set `
-                                --name $env:FUNCTION_APP_NAME `
-                                --resource-group $env:RESOURCE_GROUP `
-                                --settings `
-                                PYTHON_ENABLE_WORKER_EXTENSIONS=1 `
+                            echo "Configuring Python settings..."
+                            az functionapp config appsettings set \
+                                --name $FUNCTION_APP_NAME \
+                                --resource-group $RESOURCE_GROUP \
+                                --settings \
+                                PYTHON_ENABLE_WORKER_EXTENSIONS=1 \
                                 PYTHON_ISOLATION_LEVEL=ISOLATED
-                        } else {
-                            Write-Host "Function app already exists."
-                        }
+                        else
+                            echo "Function app already exists."
+                        fi
                         
                         # Deploy the function
-                        Write-Host "Deploying function package..."
-                        az functionapp deployment source config-zip `
-                            --name $env:FUNCTION_APP_NAME `
-                            --resource-group $env:RESOURCE_GROUP `
+                        echo "Deploying function package..."
+                        az functionapp deployment source config-zip \
+                            --name $FUNCTION_APP_NAME \
+                            --resource-group $RESOURCE_GROUP \
                             --src function_package.zip
                         
                         # Wait for function app to be ready
-                        Write-Host "Waiting for function app to be ready..."
-                        Start-Sleep -Seconds 30
+                        echo "Waiting for function app to be ready..."
+                        sleep 30
                         
                         # List functions to verify deployment
-                        Write-Host "Listing functions..."
-                        az functionapp function list `
-                            --name $env:FUNCTION_APP_NAME `
-                            --resource-group $env:RESOURCE_GROUP
+                        echo "Listing functions..."
+                        az functionapp function list \
+                            --name $FUNCTION_APP_NAME \
+                            --resource-group $RESOURCE_GROUP
                     '''
                 }
             }
