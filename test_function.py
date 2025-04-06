@@ -1,18 +1,33 @@
 import pytest
-from function_app import main
+from HttpTrigger.function_app import main
 import azure.functions as func
+import json
+from datetime import datetime
 
 @pytest.mark.asyncio
-async def test_hello_world_response():
-    # Test case 1: Check if response contains "Hello, World!"
+async def test_function_http_trigger():
+    # Create a mock HTTP request
     req = func.HttpRequest(
         method='GET',
         url='/api/hello',
-        body=None
+        body=None,
+        params={}
     )
+    
+    # Call the function
     response = main(req)
+    
+    # Assert response status code is 200
     assert response.status_code == 200
-    assert "Hello, World!" in response.get_body().decode()
+    
+    # Get response body
+    response_body = response.get_body().decode()
+    
+    # Assert response contains "Hello, World!"
+    assert "Hello, World!" in response_body
+    
+    # Assert response contains a timestamp
+    assert "Current time:" in response_body
 
 @pytest.mark.asyncio
 async def test_status_code():
