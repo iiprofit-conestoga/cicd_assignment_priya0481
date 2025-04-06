@@ -1,6 +1,6 @@
-# Azure Function CI/CD Pipeline Project
+# Azure Function App with CI/CD Pipeline
 
-This project demonstrates a CI/CD pipeline using Jenkins to deploy a Python Azure Function to Azure Functions.
+This project demonstrates a CI/CD pipeline for deploying an Azure Function App using Jenkins and GitHub.
 
 ## Project Structure
 - `function_app.py`: Main Azure Function implementation
@@ -14,45 +14,40 @@ This project demonstrates a CI/CD pipeline using Jenkins to deploy a Python Azur
 ## Prerequisites
 - Python 3.12 or higher
 - Azure CLI
-- Jenkins server with configured credentials:
-  - Azure Service Principal credentials
-  - GitHub Personal Access Token
-- Azure Function App created in Azure Portal
+- Jenkins server
+- GitHub account
+- Azure subscription with service principal having Contributor access to the resource group
 
 ## Local Development
-1. Create a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: .\venv\Scripts\activate
-   ```
-
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. Run tests locally:
-   ```bash
-   python -m pytest test_function.py -v
-   ```
+1. Clone the repository
+2. Create a virtual environment: `python -m venv venv`
+3. Activate the virtual environment:
+   - Windows: `venv\Scripts\activate`
+   - Linux/Mac: `source venv/bin/activate`
+4. Install dependencies: `pip install -r requirements.txt`
+5. Run tests: `python -m pytest`
 
 ## CI/CD Pipeline
-The Jenkins pipeline consists of three stages:
-1. Build: Sets up Python environment and installs dependencies
-2. Test: Runs automated tests
-3. Deploy: Deploys the function to Azure Functions
+The pipeline consists of the following stages:
+1. Checkout: Clones the repository
+2. Build: Sets up Python environment and installs dependencies
+3. Test: Runs unit tests
+4. Package: Creates deployment package
+5. Deploy: Deploys to Azure Function App
 
 The pipeline is triggered automatically when changes are pushed to the main branch.
 
 ## Test Cases
-The project includes three test cases:
-1. Verifies the response contains "Hello, World!"
-2. Checks if the status code is 200
-3. Validates the response type is correct
+The project includes test cases for the Azure Function:
+- Test successful HTTP trigger
+- Test error handling
+- Test response format
 
 ## Deployment
-The function is automatically deployed to Azure Functions when changes are pushed to the main branch.
-The deployed function returns "Hello, World!" along with the current timestamp.
+The application is deployed to Azure Function App using Azure CLI. The deployment process:
+1. Creates a deployment package
+2. Authenticates with Azure using service principal
+3. Deploys the package to the Function App
 
 ## Author
-Kirtirajsinh Solanki
+Priya Patel (Student ID: 8860481)
