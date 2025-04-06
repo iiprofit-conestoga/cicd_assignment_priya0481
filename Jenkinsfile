@@ -12,7 +12,7 @@ pipeline {
         AZURE_TENANT_ID = credentials('AZURE_TENANT_ID')
         AZURE_CLIENT_ID = credentials('AZURE_CLIENT_ID')
         AZURE_CLIENT_SECRET = credentials('AZURE_CLIENT_SECRET')
-        FUNCTION_APP_NAME = 'priya-function'
+        FUNCTION_APP = 'priya-function'
         RESOURCE_GROUP = 'priya-rg'
         STORAGE_ACCOUNT = 'priyastorageacc123'
         PYTHON_VERSION = '3.12'
@@ -60,49 +60,13 @@ pipeline {
                 script {
                     echo 'Creating deployment package...'
                     sh '''
-                        # Create deployment directory
                         mkdir -p deploy/HttpTrigger
-                        
-                        # Copy function code
-                        cp function_app.py deploy/HttpTrigger/__init__.py
-                        
-                        # Copy configuration files
-                        cp requirements.txt deploy/
+                        cp HttpTrigger/function_app.py deploy/HttpTrigger/__init__.py
+                        cp HttpTrigger/function.json deploy/HttpTrigger/
                         cp host.json deploy/
-                        cp local.settings.json deploy/
-                        
-                        # Create function.json for the HTTP trigger
-                        cat > deploy/HttpTrigger/function.json << 'EOF'
-{
-  "scriptFile": "__init__.py",
-  "bindings": [
-    {
-      "authLevel": "anonymous",
-      "type": "httpTrigger",
-      "direction": "in",
-      "name": "req",
-      "methods": [
-        "get",
-        "post",
-        "options"
-      ],
-      "route": "hello"
-    },
-    {
-      "type": "http",
-      "direction": "out",
-      "name": "$return"
-    }
-  ]
-}
-EOF
-                        
-                        # Create deployment package
-                        zip -r function_package.zip deploy/*
-                        
-                        # Verify package contents
-                        mkdir -p verify_package
-                        unzip -l function_package.zip
+                        cp requirements.txt deploy/
+                        cd deploy
+                        zip -r ../function.zip .
                     '''
                 }
             }
@@ -111,55 +75,14 @@ EOF
         stage('Deploy to Azure') {
             steps {
                 script {
-                    echo 'Deploying to Azure...'
-                    sh '''
-                        # Login to Azure
-                        az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
-                        az account set --subscription $AZURE_SUBSCRIPTION_ID
-                        
-                        # Create function app if it doesn't exist
-                        if ! az functionapp show --name $FUNCTION_APP_NAME --resource-group $RESOURCE_GROUP &> /dev/null; then
-                            echo "Creating new function app..."
-                            az functionapp create \
-                                --name $FUNCTION_APP_NAME \
-                                --resource-group $RESOURCE_GROUP \
-                                --storage-account $STORAGE_ACCOUNT \
-                                --runtime python \
-                                --runtime-version $PYTHON_VERSION \
-                                --functions-version $FUNCTIONS_VERSION \
-                                --os-type linux \
-                                --consumption-plan-location $LOCATION \
-                                --https-only true
-                            
-                            # Configure Python settings
-                            echo "Configuring Python settings..."
-                            az functionapp config appsettings set \
-                                --name $FUNCTION_APP_NAME \
-                                --resource-group $RESOURCE_GROUP \
-                                --settings \
-                                PYTHON_ENABLE_WORKER_EXTENSIONS=1 \
-                                PYTHON_ISOLATION_LEVEL=ISOLATED
-                        else
-                            echo "Function app already exists."
-                        fi
-                        
-                        # Deploy the function
-                        echo "Deploying function package..."
-                        az functionapp deployment source config-zip \
-                            --name $FUNCTION_APP_NAME \
-                            --resource-group $RESOURCE_GROUP \
-                            --src function_package.zip
-                        
-                        # Wait for function app to be ready
-                        echo "Waiting for function app to be ready..."
-                        sleep 30
-                        
-                        # List functions to verify deployment
-                        echo "Listing functions..."
-                        az functionapp function list \
-                            --name $FUNCTION_APP_NAME \
-                            --resource-group $RESOURCE_GROUP
-                    '''
+                    echo 'Deploying to Azure Function App...'
+                    withCredentials([usernamePassword(credentialsId: 'azure-credentials', usernameVariable: 'AZURE_CLIENT_ID', passwordVariable: 'AZURE_CLIENT_SECRET')]) {
+                        sh '''
+                            az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
+                            az account set --subscription $AZURE_SUBSCRIPTION_ID
+                            az functionapp deployment source config-zip -g $RESOURCE_GROUP -n $FUNCTION_APP --src function.zip
+                        '''
+                    }
                 }
             }
         }
