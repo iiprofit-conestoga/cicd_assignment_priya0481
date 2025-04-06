@@ -85,7 +85,18 @@ pipeline {
                         sh '''
                             az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET --tenant $AZURE_TENANT_ID
                             az account set --subscription $AZURE_SUBSCRIPTION_ID
-                            az functionapp deployment source config-zip -g $RESOURCE_GROUP -n $FUNCTION_APP --src function.zip
+                            
+                            # Check if Function App exists
+                            if ! az functionapp show --name $FUNCTION_APP --resource-group $RESOURCE_GROUP &> /dev/null; then
+                                echo "Function App does not exist. Creating it..."
+                                az functionapp create --name $FUNCTION_APP --resource-group $RESOURCE_GROUP --storage-account $STORAGE_ACCOUNT --runtime python --runtime-version $PYTHON_VERSION --functions-version $FUNCTIONS_VERSION --os-type linux --consumption-plan-location $LOCATION
+                            fi
+                            
+                            # Deploy the function app
+                            az functionapp deployment source config --name $FUNCTION_APP --resource-group $RESOURCE_GROUP --branch main --repository-type git --repository-url https://github.com/iiprofit-conestoga/cicd_assignment_priya0481.git
+                            
+                            # Restart the function app to ensure changes take effect
+                            az functionapp restart --name $FUNCTION_APP --resource-group $RESOURCE_GROUP
                         '''
                     }
                 }
