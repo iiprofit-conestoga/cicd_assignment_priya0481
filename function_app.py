@@ -3,11 +3,6 @@ import logging
 from datetime import datetime
 
 
-app = func.FunctionApp()
-
-
-@app.function_name(name="HttpTrigger")
-@app.route(route="hello", methods=["GET", "POST", "OPTIONS"])
 def main(req: func.HttpRequest) -> func.HttpResponse:
     try:
         # Handle CORS preflight requests
