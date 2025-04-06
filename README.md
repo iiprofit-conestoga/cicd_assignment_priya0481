@@ -49,5 +49,7 @@ The application is deployed to Azure Function App using Azure CLI. The deploymen
 2. Authenticates with Azure using service principal
 3. Deploys the package to the Function App
 
+The function app is deployed to: https://priya-function.azurewebsites.net/api/hello
+
 ## Author
 Priya Patel (Student ID: 8860481)
