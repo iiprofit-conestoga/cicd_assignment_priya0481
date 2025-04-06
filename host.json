@@ -28,7 +28,7 @@
     "cors": {
         "allowedOrigins": [
             "https://portal.azure.com",
-            "https://ksolanki6269-function.azurewebsites.net",
+            "https://priya-function.azurewebsites.net",
             "http://localhost:7071"
         ],
         "supportCredentials": true

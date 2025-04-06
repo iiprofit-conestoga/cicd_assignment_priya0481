@@ -1,4 +1,4 @@
-# Python 3.8
+# Python 3.12
 azure-functions==1.23.0b3
 pytest==7.4.3
 pytest-asyncio==0.21.1
