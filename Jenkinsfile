@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     environment {
-        // Azure credentials and configuration
+        // Azure credentials and configuration for assignment.
         AZURE_SUBSCRIPTION_ID = credentials('AZURE_SUBSCRIPTION_ID')
         AZURE_TENANT_ID = credentials('AZURE_TENANT_ID')
         AZURE_CLIENT_ID = credentials('AZURE_CLIENT_ID')
